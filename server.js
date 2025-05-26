@@ -52,3 +52,4 @@ res.json(game.stateofGame()); // send it back
 app.listen(PORT,() => {
     console.log(`backend running on http://localhost:${PORT}`); //starts the server
 });
+ 

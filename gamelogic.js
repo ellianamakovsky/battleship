@@ -32,7 +32,7 @@ function placeShips(x,y, size, horizontal){
 const coordinates = [];
 for (let i = 0; i < size; i++){
     if (horizontal){
-        board[y][x+i] = '*'; // ship indicator
+        board[y][x+i] = '$'; // ship indicator
         coordinates.push([x,y+i]);
     }
 }
@@ -84,9 +84,7 @@ placeUserShips(shipSpots){
     const {coordinates} = ships;
     if (coordinates = false || coordinates.length == 0) throw new Error ("Invalid coordinates");
     for (const[x,y] of coordinates){
-        if (x < 0 || x >= board_size || y < 0 || y >= board_size){
-            throw new Error ("Ship out of bounds");
-        }
+        if (x < 0 || x >= board_size || y < 0 || y >= board_size) throw new Error ("Ship out of bounds");
         if (this.userBoard[y][x]!== null){
             throw new Error ("Ships overlap");
         }
@@ -97,7 +95,84 @@ placeUserShips(shipSpots){
         ships.push({size, destroyed: 0, coordinates, sunk: false})
     }
     this.status = "playing"; // after all ships are placed
-
     }
 
+ userAttack(x,y){
+    if (this.status!== "playing") throw new Error("Not Time to Play");
+    if (this.usersTurn =  false) throw new Error("CPU's Turn");
+    if (x < 0 || x >= board_size || y < 0 || y >= board_size) throw new Error ("out of bounds");
+    if (this.userHits.some(([a,b]) => a === x && b === y)) throw new Error ("Previously Fired Here");
+    this.userHits.push([x,y]);
+    const hit = this.cpuBoard[y][x] === "$";
+    if (hit){
+        this.cpuBoard[y][x] = "Hit" //Hit the other ship
+        this.hitShip(this.cpuShips, x,y);
+    }
+    else{
+        this.cpuBoard[y][x] = "Miss" // Missed
+    }
+    // check for win
+    if (this.cpuShips.every(ship => ship.sunk)){
+        this.status = "over";
+        this.winner = "user";
+    }
+    else{
+        this.usersTurn = false;
+    }
+    return hit;
 }
+CPUAttack(x,y){
+    if (this.status!== "playing") throw new Error("Not Time to Play");
+    if (this.usersTurn =  false) throw new Error("Not CPU's Turn");
+    let x,y;
+    do {
+        x = math.floor(math.random *board_size);
+        y = math.floor(math.random *board_size);
+    }
+    while (this.cpuHits.some(([a,b]) => a === x && b === y));
+    this.cpuHits.push([x,y]);
+    const hit = this.userBoard[y][x] === "$";
+    if (hit){
+        this.userBoard[y][x] = "Hit" //Hit the other ship
+        this.hitShip(this.cpuShips, x,y);
+    }
+    else{
+        this.userBoard[y][x] = "Miss";
+    }
+     // check for win
+     if (this.userShips.every(ship => ship.sunk)){
+        this.status = "over";
+        this.winner = "cpu";
+    }
+    else{
+        this.isPlayerTurn = true;
+    }
+    return [x,y,hit];
+}
+hitShip(ships, x,y){
+    for (const ship of ships){
+        for (const [a,b] of ship.coordinates){
+            if (a ===x && b === y){
+                ship.hits++;
+                if (ship.hits >= ship.size){
+                    ship.sunk = true;
+                }
+                return;
+            }
+        }
+    }
+}
+stateofGame(){
+    return{
+        id: this.id,
+        status: this.status,
+        winner: this.winner,
+        isUsersTurn: this.usersTurn,
+        userBoard: this.userBoard,
+        cpuBoard: this.cpuBoard.map(row => row.map(cell === "$" ? null : cell)), // won't show the player the CPU ships
+        userHits: this.userHits,
+        cpuHits: this.cpuHits,
+    };
+}
+}
+module.exports = gamelogic;
