@@ -1,13 +1,26 @@
 {
-    "name": "battleship-logic",
-    "version": "1.0.0",
-    "main": "server.js",
-    "scripts": {
-      "start": "node index.js"
-    },
-    "dependencies": {
-      "cors": "^2.8.5",
-      "express": "^4.18.2",
-      "uuid": "^9.0.0"
-    }
-  }
+  "name": "battleship-logic",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "uuid": "^9.0.1"
+  },
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ellianamakovsky/battleship.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ellianamakovsky/battleship/issues"
+  },
+  "homepage": "https://github.com/ellianamakovsky/battleship#readme",
+  "devDependencies": {}
+}

@@ -1,11 +1,12 @@
 const express = require('express');
 const cors = require('cors');
-
+const path = require('path');
 const Game = require("./gamelogic");
 const app = express();
-const PORT = 3000;
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'frontend')));
+const PORT = 3000;
 const games = new Map(); // stores different games
 
 app.post('/newGame', (req, res) => {

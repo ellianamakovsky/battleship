@@ -1,0 +1,46 @@
+
+body {
+    font-family: system-ui, sans-serif;
+    background-color: #f4f4f8;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+.board { 
+    display: grid;
+    grid-template-columns: repeat(10, 32px);
+    grid-template-rows: repeat(10, 32px);
+    padding: 10px;
+    border: 1.25px solid #ccc;
+    background-color: #fff;
+    margin: 10px;
+    width: 320px;
+    height: 320px;
+    align-items: center;
+    align-content: center;
+    place-self: center;
+    
+  } 
+.cell {
+    width: 32px;
+    height: 32px;
+    background-color: #e0e0e0;
+    border-color: black;
+    cursor: pointer;
+    border: 2px; 
+    border-color: white;
+    border-radius: 30px;
+  }
+.ship{
+    background-color: rgb(20, 20, 72);
+  }
+.hit {
+    background-color: red;
+    background-size: 16px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  
+.miss {
+    background-color: #858585;
+  }
