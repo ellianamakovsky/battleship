@@ -1,75 +1,184 @@
-const board_size = 10;
-let gameID = null;
-let usersTurn = true;
+const boardSize = 10;
+const shipSizes = [2, 3, 3, 4, 5];  //standard battleship ship sizes
 
-function renderBoard(boardElements, boardData, isCpuBoard){
-    boardElements.innerHTML = ""; // removes existing content
-    for (let y = 0; y < board_size; y++){
-        for (let x = 0; x < board_size; x++){
-            const cell = document.createElement("div"); // creating divs for each of the cells
-            cell.classList.add('cell');
-            const value = boardData[y][x];
-            if (value  === "$" && !isCpuBoard) cell.classList.add("ship");
-            if (value  === "Hit") cell.classList.add("hit");
-            if (value  === "Miss") cell.classList.add("miss");
-            if (isCpuBoard && usersTurn && value != "Hit" && value != "Miss"){
-                cell.addEventListener("click", () => attack(x,y));
-            }
-            boardElements.appendChild(cell);
+let userBoard = Array(boardSize).fill(null).map(() => Array(boardSize).fill(null));
+let ships = []; // coordinates
+let selectedIndex = null;
+
+function initShips() {
+  ships = [];
+  let xStart = 0;
+  let yStart = 0;
+  for (const size of shipSizes) {
+    const coords = []; // all horizontal at beginning
+    for (let i = 0; i < size; i++) {
+      coords.push([xStart + i, yStart]);
     }
-}
-}
-function fetchState(){
-    fetch(`http://localhost:3000/state?gameID=${gameID}`)
-    .then(res => res.json())
-    .then(data => {
-        renderBoard(document.getElementById("userBoard"), data.userBoard, false);
-        renderBoard(document.getElementById("cpuBoard"), data.cpuBoard, true);
-        usersTurn = data.usersTurn;
-        document.getElementById("status").textContent = data.status === "over" ? `Game Over, ${data.winner} Wins!` 
-        : data.usersTurn ? "Your Turn" : "CPU's Turn";
-    }
-    )
-    .catch(error => {
-        console.error("error getting the game state", error);
-    });
+    ships.push({ size, coordinates: coords });
+    yStart += 2; // all vertical
+  }
+  updateBoard(); 
 }
 
-function attack(x,y){
-    if (!usersTurn) return;
-    fetch(`http://localhost:3000/attack`,{
-        method: "POST",
-        headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({gameID, x,y})
-    })
-    .then(res => res.json())
-    .then(() => {
-        fetchState(); //refresh
-    })
-    .catch(error => {
-        console.error("error during attack", error)
-    });
+function updateBoard() { // with ships in new spots
+  userBoard = Array(boardSize).fill(null).map(() => Array(boardSize).fill(null));
+  
+  for (const [index, ship] of ships.entries()) {
+    for (const [x, y] of ship.coordinates) {
+      userBoard[y][x] = index; 
     }
-window.onload = () => {
-    fetch(`http://localhost:3000/newGame`,{method: "POST"})
-    .then(res => res.json())
-    .then(data => {
-    gameID = data.gameID;
-    
-    const ships = [
-        { coordinates: [[0, 0], [0, 1], [0, 2]]},
-        { coordinates: [[2,0], [2,1]]},
-        { coordinates: [[4,0], [4,1], [4,2], [4,3]]},
-        { coordinates: [[0, 9], [1, 9], [2, 9]]},
-        { coordinates: [[9, 9], [9, 8], [9, 7], [9, 6], [9, 5]]},
-    ];
-    
-    fetch(`http://localhost:3000/placeShips`,{
-        method: "POST",
-        headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({gameID, ships})
-    })
-    .then(() => fetchState())
-    .catch(console.error);
-     });  
+  }
+  
+  const boardDiv = document.getElementById("userBoard");
+  boardDiv.innerHTML = "";
+  for (let y = 0; y < boardSize; y++) {
+    for (let x = 0; x < boardSize; x++) {
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      const shipIndex = userBoard[y][x];
+      if (shipIndex !== null) { // ensuring the cell is empty
+        cell.classList.add("ship");
+        if (shipIndex === selectedIndex) {
+          cell.classList.add("selected");
+        }
+      }
+      cell.dataset.x = x; // for clicking
+      cell.dataset.y = y;
+      boardDiv.appendChild(cell);
+    }
+  }
 }
+
+function isValidPlacement(coords, ignoreShipIndex = null) {
+  for (const [x, y] of coords) {
+    if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return false;
+  }
+  const bufferZone = [
+    [-1, -1], [0, -1], [1, -1],[-1,  0],[1,  0],[-1,  1], [0,  1], [1,  1],];
+  
+  const newShipSpot = new Set(); // track the new ship & buffer zone
+  for (const [x, y] of coords) {
+    newShipSpot.add(`${x},${y}`);
+    for (const [dx, dy] of bufferZone) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && nx < boardSize && ny >= 0 && ny < boardSize) {
+        newShipSpot.add(`${nx},${ny}`); // buffer
+      }
+    }
+  }
+  
+  for (const [i, ship] of ships.entries()) {
+    if (i === ignoreShipIndex) continue; // skip the ship we're moving
+    
+    for (const [x, y] of ship.coordinates) {
+      if (newShipSpot.has(`${x},${y}`)) {
+        return false; // ships touch/overlapping
+      }
+    }
+  }
+  return true; // no touching / overlapping
+}
+
+function moveSelectedShip(dx, dy) { // self explanatory
+  if (selectedIndex === null) return; // no ship selected
+  
+  const ship = ships[selectedIndex];
+  const newCoords = ship.coordinates.map(([x, y]) => [x + dx, y + dy]);
+  
+  if (isValidPlacement(newCoords, selectedIndex)) {
+    ship.coordinates = newCoords;
+    updateBoard();
+  }
+}
+
+function selectShip(x, y) { // find selected
+  for (const [index, ship] of ships.entries()) {
+    if (ship.coordinates.some(([sx, sy]) => sx === x && sy === y)) {
+      selectedIndex = index;
+      updateBoard();
+      return;
+    }
+  }
+  selectedIndex = null; // empty
+  updateBoard(); // deselect
+}
+
+function sendtoBack() {
+  return ships.map(ship => ({
+    coordinates: ship.coordinates
+  }));
+}
+
+document.getElementById("userBoard").addEventListener("click", e => {
+  if (!e.target.classList.contains("cell")) return; // only for cells
+  const x = parseInt(e.target.dataset.x, 10);
+  const y = parseInt(e.target.dataset.y, 10);
+  selectShip(x, y);
+});
+
+window.addEventListener("keydown", e => { // move ships w/ keyboard
+  if (selectedIndex === null) return;
+  switch(e.key) {
+    case "ArrowLeft":
+      e.preventDefault();
+      moveSelectedShip(-1, 0);
+      break;
+    case "ArrowRight":
+      e.preventDefault();
+      moveSelectedShip(1, 0);
+      break;
+    case "ArrowUp":
+      e.preventDefault();
+      moveSelectedShip(0, -1);
+      break;
+    case "ArrowDown":
+      e.preventDefault();
+      moveSelectedShip(0, 1);
+      break;
+  }
+});
+
+document.getElementById("startGame").addEventListener("click", async () => {
+  if (ships.length !== shipSizes.length) {
+    alert("Error: not all ships placed!");
+    return;
+  }
+  
+  try {
+    const response = await fetch("/placeShips", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        gameID: currentGameID,  
+        ships: sendtoBack(),
+      }),
+    });
+    const data = await response.json();
+    if (data.error) {
+      alert("Error placing ships: " + data.error);
+    } else {
+      alert("Ships placed! Game state: " + JSON.stringify(data.state));
+    }
+  } catch (err) {
+    alert("Network error: " + err.message);
+  }
+});
+
+let currentGameID = null;
+
+async function startNewGame() {
+  try {
+    const res = await fetch("/newGame", { method: "POST" }); // new game request
+    const data = await res.json();
+    currentGameID = data.gameID;
+    initShips();
+  } catch (err) {
+    alert("Failed to start game: " + err.message);
+  }
+}
+
+startNewGame();
+
+
+

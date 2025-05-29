@@ -33,6 +33,7 @@ body {
   }
 .ship{
     background-color: rgb(20, 20, 72);
+    border: 1px white;
   }
 .hit {
     background-color: red;
@@ -43,4 +44,19 @@ body {
   
 .miss {
     background-color: #858585;
+  }
+  .draggable-ship{
+    background-color: lightblue;
+    margin-bottom: 8px;
+    cursor: grab;
+    user-select: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    border: 1px, black;
+  }
+  
+  .selected{
+    background-color: red;
   }
